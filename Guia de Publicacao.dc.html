@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,16..72,400;0,16..72,500;0,16..72,600;1,16..72,400&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:'Hanken Grotesk',system-ui,sans-serif;color:#112027;background:#EEF1F2;-webkit-font-smoothing:antialiased}
+  @media print{ @page{size:A4;margin:14mm} body{background:#fff} .noprint{display:none!important} .phase{break-inside:avoid} }
+</style>
+</helmet>
+<div style="max-width:840px;margin:0 auto;padding:30px 26px 80px">
+
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(150deg,#1C7C92,#14596B);display:flex;align-items:center;justify-content:center;flex:0 0 38px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EAF6F9" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></div>
+      <div><div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#7A8890;font-weight:700">Radar AEO/GEO VendaMais</div><div style="font-family:'Newsreader',serif;font-size:15px;color:#14596B">Guia de publicação</div></div>
+    </div>
+    <div onClick="{{ print }}" class="noprint" style="cursor:pointer;background:#14596B;color:#fff;padding:9px 16px;border-radius:9px;font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px;white-space:nowrap"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.9"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>Imprimir / PDF</div>
+  </div>
+
+  <h1 style="font-family:'Newsreader',serif;font-weight:500;font-size:32px;margin:14px 0 6px;letter-spacing:-.01em">Como colocar o sistema no ar</h1>
+  <p style="margin:0 0 22px;color:#5C6B72;font-size:15px;line-height:1.55;max-width:640px">Um passo a passo simples, sem programar. São 3 serviços gratuitos e 5 fases. Siga na ordem — leva cerca de 20 minutos no total.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:26px">
+    <div style="background:#fff;border:1px solid #E2E7E9;border-radius:12px;padding:15px 16px"><div style="font-size:11px;font-weight:700;color:#7A8890;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Supabase</div><div style="font-size:13px;color:#3A4750;line-height:1.4">O banco de dados (guarda as informações)</div></div>
+    <div style="background:#fff;border:1px solid #E2E7E9;border-radius:12px;padding:15px 16px"><div style="font-size:11px;font-weight:700;color:#7A8890;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">GitHub</div><div style="font-size:13px;color:#3A4750;line-height:1.4">Guarda o código do sistema</div></div>
+    <div style="background:#fff;border:1px solid #E2E7E9;border-radius:12px;padding:15px 16px"><div style="font-size:11px;font-weight:700;color:#7A8890;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Vercel</div><div style="font-size:13px;color:#3A4750;line-height:1.4">Publica o site numa URL</div></div>
+  </div>
+
+  <!-- FASE 1 -->
+  <div class="phase" style="background:#fff;border:1px solid #E2E7E9;border-radius:16px;padding:24px 26px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div style="width:34px;height:34px;border-radius:50%;background:#14596B;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex:0 0 34px;font-family:'Newsreader',serif">1</div>
+      <div><div style="font-size:18px;font-weight:700">Criar a tabela no Supabase</div><div style="font-size:12.5px;color:#7A8890">Prepara o banco para receber os dados · ~3 min</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#EDF3F5;color:#14596B;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">a</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Entre no seu projeto em <strong>supabase.com</strong>.</div></div>
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#EDF3F5;color:#14596B;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">b</span><div style="font-size:14px;color:#3A4750;line-height:1.5">No menu da esquerda, clique em <strong>SQL Editor</strong> e depois em <strong>New query</strong>.</div></div>
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#EDF3F5;color:#14596B;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">c</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Abra o arquivo <strong>supabase-schema.sql</strong> (vem no pacote) ou copie o SQL da tela <strong>Configurações</strong> do app, cole na área de texto e clique no botão <strong>Run</strong>.</div></div>
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#E5F1EA;color:#2E8A66;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">✓</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Deve aparecer <strong>Success. No rows returned</strong>. Pronto, a tabela foi criada.</div></div>
+    </div>
+  </div>
+
+  <!-- FASE 2 -->
+  <div class="phase" style="background:#fff;border:1px solid #E2E7E9;border-radius:16px;padding:24px 26px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div style="width:34px;height:34px;border-radius:50%;background:#14596B;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex:0 0 34px;font-family:'Newsreader',serif">2</div>
+      <div><div style="font-size:18px;font-weight:700">Copiar as duas chaves do banco</div><div style="font-size:12.5px;color:#7A8890">É o que liga o site ao banco · ~2 min</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#EDF3F5;color:#14596B;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">a</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Ainda no Supabase, clique em <strong>Project Settings</strong> (engrenagem no rodapé do menu) e depois em <strong>API</strong>.</div></div>
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#EDF3F5;color:#14596B;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">b</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Copie a <strong>Project URL</strong> (parecida com <span style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#F2F5F6;padding:1px 6px;border-radius:4px">https://xxxx.supabase.co</span>).</div></div>
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#EDF3F5;color:#14596B;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">c</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Copie a chave marcada como <strong>anon</strong> / <strong>public</strong> (começa com <span style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#F2F5F6;padding:1px 6px;border-radius:4px">eyJ...</span>). Guarde as duas.</div></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:flex-start;background:#FDF4F2;border:1px solid #F0D8D2;border-radius:11px;padding:13px 15px;margin-top:14px">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#B14B3E" stroke-width="2" style="flex:0 0 17px;margin-top:1px"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+      <div style="font-size:12.5px;color:#8A3B30;line-height:1.5"><strong>Atenção:</strong> use só a chave <strong>anon / public</strong>. Nunca compartilhe nem publique a chave <strong>service_role</strong> (secret) — essa é privada.</div>
+    </div>
+  </div>
+
+  <!-- FASE 3 -->
+  <div class="phase" style="background:#fff;border:1px solid #E2E7E9;border-radius:16px;padding:24px 26px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div style="width:34px;height:34px;border-radius:50%;background:#14596B;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex:0 0 34px;font-family:'Newsreader',serif">3</div>
+      <div><div style="font-size:18px;font-weight:700">Subir o código no GitHub</div><div style="font-size:12.5px;color:#7A8890">Sem comandos — pelo navegador · ~5 min</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#EDF3F5;color:#14596B;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">a</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Baixe o pacote do projeto (o cartão de download que enviei no chat) e <strong>descompacte o .zip</strong> no seu computador.</div></div>
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#EDF3F5;color:#14596B;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">b</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Em <strong>github.com</strong>, clique em <strong>New</strong> (novo repositório), dê um nome (ex.: <span style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#F2F5F6;padding:1px 6px;border-radius:4px">radar-vendamais</span>) e clique <strong>Create repository</strong>.</div></div>
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#EDF3F5;color:#14596B;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">c</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Na página do repositório, clique em <strong>uploading an existing file</strong> e <strong>arraste todos os arquivos descompactados</strong> para a área indicada.</div></div>
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#E5F1EA;color:#2E8A66;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">✓</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Clique <strong>Commit changes</strong>. Seus arquivos estão no GitHub.</div></div>
+    </div>
+  </div>
+
+  <!-- FASE 4 -->
+  <div class="phase" style="background:#fff;border:1px solid #E2E7E9;border-radius:16px;padding:24px 26px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div style="width:34px;height:34px;border-radius:50%;background:#14596B;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex:0 0 34px;font-family:'Newsreader',serif">4</div>
+      <div><div style="font-size:18px;font-weight:700">Publicar na Vercel</div><div style="font-size:12.5px;color:#7A8890">Coloca o site no ar · ~3 min</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#EDF3F5;color:#14596B;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">a</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Entre em <strong>vercel.com</strong> com sua conta do GitHub e clique em <strong>Add New → Project</strong>.</div></div>
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#EDF3F5;color:#14596B;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">b</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Encontre o repositório <span style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#F2F5F6;padding:1px 6px;border-radius:4px">radar-vendamais</span> e clique <strong>Import</strong>.</div></div>
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#EDF3F5;color:#14596B;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">c</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Não precisa mexer em nada (é site estático, sem build). Clique <strong>Deploy</strong> e aguarde.</div></div>
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#E5F1EA;color:#2E8A66;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">✓</span><div style="font-size:14px;color:#3A4750;line-height:1.5">A Vercel mostra a <strong>URL pública</strong> (ex.: <span style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:#F2F5F6;padding:1px 6px;border-radius:4px">radar-vendamais.vercel.app</span>). Esse é o seu sistema no ar.</div></div>
+    </div>
+  </div>
+
+  <!-- FASE 5 -->
+  <div class="phase" style="background:#fff;border:1px solid #E2E7E9;border-radius:16px;padding:24px 26px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div style="width:34px;height:34px;border-radius:50%;background:#2E8A66;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex:0 0 34px;font-family:'Newsreader',serif">5</div>
+      <div><div style="font-size:18px;font-weight:700">Conectar o banco no app</div><div style="font-size:12.5px;color:#7A8890">Liga tudo · ~1 min</div></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#EDF3F5;color:#14596B;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">a</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Abra a URL pública e vá em <strong>Configurações → Banco de dados compartilhado</strong>.</div></div>
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#EDF3F5;color:#14596B;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">b</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Cole a <strong>Project URL</strong> e a <strong>anon public</strong> da Fase 2 e clique <strong>Conectar banco</strong>.</div></div>
+      <div style="display:flex;gap:12px"><span style="flex:0 0 22px;height:22px;border-radius:6px;background:#E5F1EA;color:#2E8A66;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center">✓</span><div style="font-size:14px;color:#3A4750;line-height:1.5">Aparece <strong>Conectado</strong>. A outra pessoa só precisa abrir a mesma URL e conectar igual — os dados ficam salvos na nuvem e sincronizados.</div></div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:flex-start;background:#EDF3F5;border:1px solid #D6E5E9;border-radius:11px;padding:13px 15px;margin-top:14px">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#14596B" stroke-width="2" style="flex:0 0 17px;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div style="font-size:12.5px;color:#15414E;line-height:1.5">Quer pular esta fase e já abrir <strong>conectado por padrão</strong>, sem ninguém colar nada? Me mande a <strong>Project URL</strong> e a <strong>anon public</strong> no chat que eu embuto no sistema e te devolvo o pacote pronto.</div>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:18px;color:#9AA7AD;font-size:12px">Radar AEO/GEO VendaMais · Guia de publicação · dúvida em qualquer passo é só me chamar</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals(){ return { print:()=>{ try{ window.print(); }catch(e){} } }; }
+}
+</script>
+</body>
+</html>

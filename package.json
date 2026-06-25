@@ -1,0 +1,12 @@
+{
+  "name": "radar-aeo-geo-vendamais",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Radar AEO/GEO VendaMais — inteligência de presença em respostas de IA, foco mensal de whale hunting e recomendações de conteúdo.",
+  "scripts": {
+    "dev": "npx serve .",
+    "start": "npx serve .",
+    "build": "echo \"Site estático — sem build step\""
+  },
+  "license": "UNLICENSED"
+}
