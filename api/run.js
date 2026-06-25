@@ -146,6 +146,39 @@ async function analyzeAnswer(apiKey, empresa, concorrentes, question, answer) {
   }
 }
 
+// Geração de perguntas AEO/GEO alinhadas ao foco do mês
+async function generateQuestions(apiKey, empresa, ctx) {
+  const partes = [];
+  if (ctx.nome) partes.push('Foco do mês: ' + ctx.nome);
+  if (ctx.nicho) partes.push('Nicho/segmento: ' + ctx.nicho);
+  if (ctx.solucoes && ctx.solucoes.length) partes.push('Soluções: ' + ctx.solucoes.join(', '));
+  if (ctx.dores) partes.push('Dores do cliente: ' + ctx.dores);
+  if (ctx.objetivo) partes.push('Objetivo do mês: ' + ctx.objetivo);
+  if (ctx.icp) partes.push('Cliente ideal (ICP): ' + ctx.icp);
+  if (ctx.concorrentes) partes.push('Concorrentes: ' + (Array.isArray(ctx.concorrentes) ? ctx.concorrentes.join(', ') : ctx.concorrentes));
+
+  const sys =
+    'Você cria perguntas de teste AEO/GEO em português do Brasil. As perguntas simulam o que um potencial cliente digitaria a uma IA (ChatGPT) ao buscar soluções — portanto NÃO devem citar "' + empresa + '" diretamente, EXCETO 1 ou 2 perguntas comparativas/de marca no final. ' +
+    'Gere de 6 a 8 perguntas curtas, naturais e específicas ao foco informado, cobrindo: descoberta do nicho, soluções, dor do cliente e 1 comparativa de marca. Devolva apenas as perguntas.';
+  const user = 'Contexto do foco do mês:\n' + (partes.join('\n') || '(sem contexto detalhado)');
+  const schema = { type: 'object', additionalProperties: false, properties: { questions: { type: 'array', items: { type: 'string' } } }, required: ['questions'] };
+
+  try {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: ANALYSIS_MODEL, temperature: 0.5, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], response_format: { type: 'json_schema', json_schema: { name: 'perguntas_aeo_geo', strict: true, schema } } }),
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error.message || 'Erro ao gerar perguntas');
+    const raw = d.choices && d.choices[0] && d.choices[0].message ? d.choices[0].message.content : '{}';
+    const parsed = JSON.parse(raw);
+    return (parsed.questions || []).filter(Boolean).slice(0, 8);
+  } catch (e) {
+    return [];
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST') { res.status(405).json({ error: 'method_not_allowed', message: 'Use POST.' }); return; }
@@ -156,6 +189,14 @@ export default async function handler(req, res) {
 
   const apiKey = (process.env.OPENAI_API_KEY || body.apiKey || '').trim();
   if (!apiKey) { res.status(400).json({ error: 'no_key', message: 'Nenhuma chave da OpenAI encontrada. Configure OPENAI_API_KEY na Vercel ou cole a chave em Configurações.' }); return; }
+
+  // Ação: apenas gerar perguntas alinhadas ao foco (sem rodar a análise)
+  if (body.action === 'questions') {
+    const empresaQ = (body.empresa || 'VendaMais').trim();
+    const qs = await generateQuestions(apiKey, empresaQ, body.focusContext || {});
+    res.status(200).json({ ok: true, questions: qs });
+    return;
+  }
 
   const empresa = (body.empresa || 'VendaMais').trim();
   const concorrentes = Array.isArray(body.concorrentes) ? body.concorrentes : [];
