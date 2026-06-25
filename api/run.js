@@ -179,6 +179,39 @@ async function generateQuestions(apiKey, empresa, ctx) {
   }
 }
 
+// Geração do TEXTO completo de cada ativo de conteúdo, alinhado ao foco
+async function generateContent(apiKey, empresa, ctx, ativos) {
+  const partes = [];
+  if (ctx.nome) partes.push('Foco do mês: ' + ctx.nome);
+  if (ctx.nicho) partes.push('Nicho: ' + ctx.nicho);
+  if (ctx.solucoes && ctx.solucoes.length) partes.push('Soluções: ' + ctx.solucoes.join(', '));
+  if (ctx.dores) partes.push('Dores do cliente: ' + ctx.dores);
+  if (ctx.objetivo) partes.push('Objetivo do mês: ' + ctx.objetivo);
+  if (ctx.icp) partes.push('Cliente ideal (ICP): ' + ctx.icp);
+  const ctxTxt = partes.join('\n') || '(sem contexto detalhado)';
+  const schema = { type: 'object', additionalProperties: false, properties: { titulo: { type: 'string' }, conteudo: { type: 'string' } }, required: ['titulo', 'conteudo'] };
+
+  async function one(tipo) {
+    const sys = 'Você é redator de marketing B2B da empresa "' + empresa + '", especialista em AEO/GEO (otimização para respostas de IA). Escreva um ' + tipo + ' COMPLETO, bem escrito e pronto para revisão, em português do Brasil, alinhado ao foco do mês. Use formato answer-first, linguagem clara e específica ao nicho, com títulos/seções quando fizer sentido. Não invente números específicos — use [inserir dado] quando precisar. O texto deve posicionar a "' + empresa + '" como referência no tema.';
+    const user = 'Tipo de conteúdo: ' + tipo + '\n\nContexto do foco do mês:\n' + ctxTxt + '\n\nEscreva o ' + tipo + ' completo (título + corpo).';
+    try {
+      const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: ANSWER_MODEL, temperature: 0.6, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], response_format: { type: 'json_schema', json_schema: { name: 'conteudo', strict: true, schema } } }),
+      });
+      const d = await r.json();
+      if (d.error) throw new Error(d.error.message || 'Erro ao gerar conteúdo');
+      const raw = d.choices && d.choices[0] && d.choices[0].message ? d.choices[0].message.content : '{}';
+      const p = JSON.parse(raw);
+      return { tipo: tipo, titulo: p.titulo || tipo, conteudo: p.conteudo || '' };
+    } catch (e) {
+      return { tipo: tipo, titulo: tipo, conteudo: '', error: e.message || String(e) };
+    }
+  }
+  return Promise.all((ativos || []).slice(0, 8).map(one));
+}
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST') { res.status(405).json({ error: 'method_not_allowed', message: 'Use POST.' }); return; }
@@ -195,6 +228,15 @@ export default async function handler(req, res) {
     const empresaQ = (body.empresa || 'VendaMais').trim();
     const qs = await generateQuestions(apiKey, empresaQ, body.focusContext || {});
     res.status(200).json({ ok: true, questions: qs });
+    return;
+  }
+
+  // Ação: escrever o TEXTO completo de cada ativo de conteúdo
+  if (body.action === 'content') {
+    const empresaC = (body.empresa || 'VendaMais').trim();
+    const ativos = Array.isArray(body.ativos) ? body.ativos : [];
+    const items = await generateContent(apiKey, empresaC, body.focusContext || {}, ativos);
+    res.status(200).json({ ok: true, items: items });
     return;
   }
 
