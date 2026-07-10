@@ -212,6 +212,122 @@ async function generateContent(apiKey, empresa, ctx, ativos) {
   return Promise.all((ativos || []).slice(0, 8).map(one));
 }
 
+// ============================================================================
+// Gerador de focos — análise profunda de MERCADO + PORTFÓLIO da VendaMais
+// Fase 1: pesquisa de mercado com busca na web (sinais reais, grounded).
+// Fase 2: estrutura N focos ranqueados no formato completo do app.
+// ============================================================================
+async function researchMarket(apiKey, empresa, portfolio, objetivo, restricoes, dados, briefing) {
+  const q =
+    'Você é analista de estratégia de mercado B2B no Brasil. Faça uma análise objetiva de mercado para a empresa "' + empresa + '" ' +
+    '(desenvolvimento e treinamento comercial). Portfólio de soluções: ' + (portfolio || []).join(', ') + '. ' +
+    'Objetivo do mês: ' + (objetivo || '(não informado)') + '. Restrições/prioridades: ' + (restricoes || '(nenhuma)') + '. ' +
+    'Fontes de dados disponíveis: ' + ((dados || []).join(', ') || '(nenhuma)') + '. ' +
+    (briefing ? ('Briefing interno: ' + briefing.slice(0, 1500) + '. ') : '') +
+    'Identifique de 8 a 12 NICHOS/SEGMENTOS de mercado no Brasil com maior potencial de "whale hunting" para esse portfólio, ' +
+    'considerando: tamanho e aquecimento do setor, dor comercial, concorrência (consultorias/treinamentos que atuam nele), ' +
+    'sazonalidade/eventos, e lacunas de presença em respostas de IA (AEO/GEO). Para cada nicho traga 1-2 frases de justificativa ' +
+    'com sinais concretos e, quando citar tendência ou dado, indique a fonte. Seja específico ao mercado brasileiro atual.';
+  try {
+    const r = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: ANSWER_MODEL, tools: [{ type: 'web_search_preview' }], input: q }),
+    });
+    const d = await r.json();
+    if (!d.error) { const t = extractText(d); if (t) return t; }
+  } catch (e) { /* fallback abaixo */ }
+  // fallback sem busca
+  try {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: ANSWER_MODEL, temperature: 0.5, messages: [{ role: 'user', content: q }] }),
+    });
+    const d = await r.json();
+    if (!d.error && d.choices && d.choices[0]) return d.choices[0].message.content || '';
+  } catch (e) { /* ignore */ }
+  return '';
+}
+
+async function generateFocos(apiKey, empresa, portfolio, inputs, qtd) {
+  const research = await researchMarket(apiKey, empresa, portfolio, inputs.objetivo, inputs.restricoes, inputs.dados, inputs.briefing);
+  const n = Math.max(3, Math.min(12, qtd || 5));
+  const foco = {
+    type: 'object', additionalProperties: false,
+    properties: {
+      id: { type: 'string' },
+      nome: { type: 'string' },
+      subnicho: { type: 'string' },
+      tese: { type: 'string' },
+      confianca: { type: 'string', enum: ['alta', 'media-alta', 'media', 'baixa'] },
+      acao: { type: 'string' },
+      refinar: { type: 'boolean' },
+      tipoEntrada: { type: 'string' },
+      notas: {
+        type: 'object', additionalProperties: false,
+        properties: {
+          comercial: { type: 'integer' }, fit: { type: 'integer' }, autoridade: { type: 'integer' },
+          lacuna: { type: 'integer' }, concorrentes: { type: 'integer' }, urgencia: { type: 'integer' },
+          execucao: { type: 'integer' }, alinhamento: { type: 'integer' },
+        },
+        required: ['comercial', 'fit', 'autoridade', 'lacuna', 'concorrentes', 'urgencia', 'execucao', 'alinhamento'],
+      },
+      solucoes: { type: 'array', items: { type: 'string' } },
+      evidencias: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { fonte: { type: 'string' }, texto: { type: 'string' }, forca: { type: 'string', enum: ['Forte', 'Média', 'Fraca'] }, origem: { type: 'string' } }, required: ['fonte', 'texto', 'forca', 'origem'] } },
+      perguntas: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { texto: { type: 'string' }, categoria: { type: 'string' }, prioridade: { type: 'string', enum: ['Crítica', 'Alta', 'Média'] } }, required: ['texto', 'categoria', 'prioridade'] } },
+      concorrentes: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { nome: { type: 'string' }, tipo: { type: 'string' }, frequencia: { type: 'string' }, risco: { type: 'string', enum: ['Alto', 'Médio', 'Baixo'] } }, required: ['nome', 'tipo', 'frequencia', 'risco'] } },
+      ativos: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { tipo: { type: 'string' }, titulo: { type: 'string' }, objetivo: { type: 'string' }, prioridade: { type: 'string', enum: ['Crítica', 'Alta', 'Média'] } }, required: ['tipo', 'titulo', 'objetivo', 'prioridade'] } },
+      contas: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { empresa: { type: 'string' }, segmento: { type: 'string' }, motivo: { type: 'string' }, prioridade: { type: 'string', enum: ['Alta', 'Média', 'Baixa'] } }, required: ['empresa', 'segmento', 'motivo', 'prioridade'] } },
+      riscos: { type: 'array', items: { type: 'object', additionalProperties: false, properties: { texto: { type: 'string' }, nivel: { type: 'string', enum: ['Alto', 'Médio', 'Baixo'] } }, required: ['texto', 'nivel'] } },
+      scoreInicial: { type: 'integer' }, presencaInicial: { type: 'integer' },
+      metaScore: { type: 'integer' }, metaPresenca: { type: 'integer' },
+      metaLeads: { type: 'integer' }, metaReunioes: { type: 'integer' }, metaOportunidades: { type: 'integer' },
+    },
+    required: ['id', 'nome', 'subnicho', 'tese', 'confianca', 'acao', 'refinar', 'tipoEntrada', 'notas', 'solucoes', 'evidencias', 'perguntas', 'concorrentes', 'ativos', 'contas', 'riscos', 'scoreInicial', 'presencaInicial', 'metaScore', 'metaPresenca', 'metaLeads', 'metaReunioes', 'metaOportunidades'],
+  };
+  const schema = { type: 'object', additionalProperties: false, properties: { focos: { type: 'array', items: foco } }, required: ['focos'] };
+
+  const sys =
+    'Você é o motor de recomendação estratégica do Radar AEO/GEO da "' + empresa + '". ' +
+    'Recomende EXATAMENTE ' + n + ' focos mensais de whale hunting, ranqueados do mais forte ao mais fraco, ' +
+    'com base em: análise de mercado, portfólio da empresa, concorrência, lacunas de presença em respostas de IA (AEO/GEO), ' +
+    'tendências, capacidade de execução e prioridades comerciais. Cada foco é um nicho/segmento distinto — NÃO repita nichos. ' +
+    'Português do Brasil, específico e realista para o mercado brasileiro atual. ' +
+    'Regras de preenchimento: notas de 0 a 10 (inteiros) coerentes com a tese; confianca ∈ {alta, media-alta, media, baixa}; ' +
+    'acao curta ("Selecionar como foco principal", "Avaliar como próximo ciclo", "Descartar por ora"); ' +
+    'refinar=true quando o nicho ainda é amplo; tipoEntrada normalmente "Assistida"; ' +
+    'solucoes SOMENTE do portfólio fornecido; evidencias com origem plausível ("Análise de mercado", "Portfólio", "Rodadas AEO/GEO", "CRM e pipeline", "Tendências"); ' +
+    'perguntas = o que um decisor desse nicho perguntaria a uma IA (formato whale hunting/comparativo/dor); ' +
+    'contas = empresas-alvo reais ou plausíveis do nicho no Brasil; ' +
+    'scoreInicial 20-55, metaScore 65-80, presencaInicial 5-25, metaPresenca 35-55, e metas de leads/reuniões/oportunidades realistas. ' +
+    'id = slug curto único (ex.: "coop", "agro", "saude").';
+  const user =
+    'PORTFÓLIO da ' + empresa + ' (use só estes em "solucoes"): ' + (portfolio || []).join(', ') + '\n' +
+    'OBJETIVO do mês: ' + (inputs.objetivo || '(não informado)') + '\n' +
+    'RESTRIÇÕES/PRIORIDADES: ' + (inputs.restricoes || '(nenhuma)') + '\n' +
+    'SOLUÇÕES a enfatizar: ' + ((inputs.solucoes || []).join(', ') || '(livre)') + '\n' +
+    'FONTES DE DADOS consideradas: ' + ((inputs.dados || []).join(', ') || '(nenhuma)') + '\n' +
+    (inputs.briefing ? ('BRIEFING interno: ' + inputs.briefing.slice(0, 1800) + '\n') : '') +
+    '\nANÁLISE DE MERCADO (pesquisa, use como base factual):\n"""\n' + (research || '(indisponível — use seu conhecimento do mercado brasileiro)') + '\n"""\n\n' +
+    'Gere os ' + n + ' focos ranqueados agora.';
+
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: ANSWER_MODEL, temperature: 0.55, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], response_format: { type: 'json_schema', json_schema: { name: 'focos_ranqueados', strict: true, schema } } }),
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message || 'Erro ao gerar focos');
+  const raw = d.choices && d.choices[0] && d.choices[0].message ? d.choices[0].message.content : '{}';
+  const parsed = JSON.parse(raw);
+  const focos = (parsed.focos || []).slice(0, n);
+  // dedup de ids
+  const seen = {};
+  focos.forEach((f, i) => { let id = (f.id || ('foco' + i)).toString().toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 12) || ('foco' + i); while (seen[id]) id = id + i; seen[id] = 1; f.id = id; });
+  return { focos, grounded: !!research };
+}
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   if (req.method !== 'POST') { res.status(405).json({ error: 'method_not_allowed', message: 'Use POST.' }); return; }
@@ -237,6 +353,24 @@ export default async function handler(req, res) {
     const ativos = Array.isArray(body.ativos) ? body.ativos : [];
     const items = await generateContent(apiKey, empresaC, body.focusContext || {}, ativos);
     res.status(200).json({ ok: true, items: items });
+    return;
+  }
+
+  // Ação: gerar focos ranqueados (análise profunda de mercado + portfólio)
+  if (body.action === 'focos') {
+    const empresaF = (body.empresa || 'VendaMais').trim();
+    const portfolio = Array.isArray(body.portfolio) ? body.portfolio : [];
+    const inputs = {
+      objetivo: body.objetivo || '', restricoes: body.restricoes || '',
+      solucoes: Array.isArray(body.solucoes) ? body.solucoes : [],
+      dados: Array.isArray(body.dados) ? body.dados : [], briefing: body.briefing || '',
+    };
+    try {
+      const out = await generateFocos(apiKey, empresaF, portfolio, inputs, body.qtd || 5);
+      res.status(200).json({ ok: true, focos: out.focos, grounded: out.grounded });
+    } catch (e) {
+      res.status(500).json({ error: 'focos_failed', message: 'Falha ao gerar focos: ' + (e.message || String(e)) });
+    }
     return;
   }
 
