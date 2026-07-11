@@ -255,7 +255,7 @@ async function researchSubsegments(apiKey, empresa, portfolio, parent) {
   const q =
     'Você é analista de mercado B2B no Brasil. O macro-segmento em análise é "' + parent.nome + '"' + (parent.tese ? (' — contexto: ' + parent.tese) : '') + '. ' +
     'Liste as 10 a 12 principais SUBDIVISÕES/subsegmentos desse setor no Brasil (elos da cadeia, categorias de empresas). ' +
-    'Para cada subdivisão, indique brevemente: volume/tamanho de mercado no Brasil, potencial de margem/ticket para serviços de consultoria e treinamento comercial, maturidade comercial típica das empresas e sinais de dor comercial. ' +
+    'Para cada subdivisão, indique EM 1-2 LINHAS: volume/tamanho de mercado no Brasil, potencial de margem/ticket para serviços de consultoria e treinamento comercial, maturidade comercial típica das empresas e sinais de dor comercial. Seja conciso — máximo ~400 palavras no total. ' +
     'Empresa interessada: "' + empresa + '" (portfólio: ' + (portfolio || []).join(', ') + '). Cite fontes quando usar dados.';
   try {
     const r = await fetch('https://api.openai.com/v1/responses', {
@@ -321,7 +321,7 @@ async function findAssociations(apiKey, empresa, nicho, contexto) {
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: ANSWER_MODEL, temperature: 0.3, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], response_format: { type: 'json_schema', json_schema: { name: 'associacoes', strict: true, schema } } }),
+    body: JSON.stringify({ model: ANALYSIS_MODEL, temperature: 0.3, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], response_format: { type: 'json_schema', json_schema: { name: 'associacoes', strict: true, schema } } }),
   });
   const d = await r.json();
   if (d.error) throw new Error(d.error.message || 'Erro ao estruturar associações');
@@ -419,10 +419,11 @@ async function generateFocos(apiKey, empresa, portfolio, inputs, qtd, mode) {
       'Gere os ' + n + ' subsegmentos ranqueados agora.';
   }
 
+  const genModel = (mode && mode.parent) ? ANALYSIS_MODEL : ANSWER_MODEL;
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: ANSWER_MODEL, temperature: 0.55, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], response_format: { type: 'json_schema', json_schema: { name: 'focos_ranqueados', strict: true, schema } } }),
+    body: JSON.stringify({ model: genModel, temperature: 0.55, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], response_format: { type: 'json_schema', json_schema: { name: 'focos_ranqueados', strict: true, schema } } }),
   });
   const d = await r.json();
   if (d.error) throw new Error(d.error.message || 'Erro ao gerar focos');
