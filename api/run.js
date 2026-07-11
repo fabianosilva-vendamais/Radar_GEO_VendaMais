@@ -250,8 +250,90 @@ async function researchMarket(apiKey, empresa, portfolio, objetivo, restricoes, 
   return '';
 }
 
-async function generateFocos(apiKey, empresa, portfolio, inputs, qtd) {
-  const research = await researchMarket(apiKey, empresa, portfolio, inputs.objetivo, inputs.restricoes, inputs.dados, inputs.briefing);
+// Pesquisa focada nas subdivisões de um macro-segmento
+async function researchSubsegments(apiKey, empresa, portfolio, parent) {
+  const q =
+    'Você é analista de mercado B2B no Brasil. O macro-segmento em análise é "' + parent.nome + '"' + (parent.tese ? (' — contexto: ' + parent.tese) : '') + '. ' +
+    'Liste as 10 a 12 principais SUBDIVISÕES/subsegmentos desse setor no Brasil (elos da cadeia, categorias de empresas). ' +
+    'Para cada subdivisão, indique brevemente: volume/tamanho de mercado no Brasil, potencial de margem/ticket para serviços de consultoria e treinamento comercial, maturidade comercial típica das empresas e sinais de dor comercial. ' +
+    'Empresa interessada: "' + empresa + '" (portfólio: ' + (portfolio || []).join(', ') + '). Cite fontes quando usar dados.';
+  try {
+    const r = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: ANSWER_MODEL, tools: [{ type: 'web_search_preview' }], input: q }),
+    });
+    const d = await r.json();
+    if (!d.error) { const t = extractText(d); if (t) return t; }
+  } catch (e) { /* fallback abaixo */ }
+  try {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: ANSWER_MODEL, temperature: 0.5, messages: [{ role: 'user', content: q }] }),
+    });
+    const d = await r.json();
+    if (!d.error && d.choices && d.choices[0]) return d.choices[0].message.content || '';
+  } catch (e) { /* ignore */ }
+  return '';
+}
+
+// Associações e entidades de classe do segmento (com busca na web)
+async function findAssociations(apiKey, empresa, nicho, contexto) {
+  const q =
+    'Liste as principais associações setoriais, federações, confederações, sindicatos patronais e entidades de classe do setor "' + nicho + '" no Brasil — as nacionais e as estaduais/regionais mais fortes. ' +
+    'Para cada uma: nome completo, sigla, tipo de entidade, abrangência, e por que é relevante para uma empresa de consultoria e treinamento comercial ("' + empresa + '") que quer se posicionar nesse setor (eventos, feiras, publicações, comissões, acesso a associados).' +
+    (contexto ? (' Contexto adicional: ' + contexto) : '');
+  let research = '';
+  try {
+    const r = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: ANSWER_MODEL, tools: [{ type: 'web_search_preview' }], input: q }),
+    });
+    const d = await r.json();
+    if (!d.error) research = extractText(d) || '';
+  } catch (e) { /* segue sem pesquisa */ }
+
+  const schema = {
+    type: 'object', additionalProperties: false,
+    properties: {
+      items: {
+        type: 'array',
+        items: {
+          type: 'object', additionalProperties: false,
+          properties: {
+            nome: { type: 'string' }, sigla: { type: 'string' }, tipo: { type: 'string' },
+            abrangencia: { type: 'string' }, relevancia: { type: 'string', enum: ['Alta', 'Média', 'Baixa'] },
+            motivo: { type: 'string' }, comoUsar: { type: 'string' },
+          },
+          required: ['nome', 'sigla', 'tipo', 'abrangencia', 'relevancia', 'motivo', 'comoUsar'],
+        },
+      },
+    },
+    required: ['items'],
+  };
+  const sys =
+    'Você estrutura pesquisas de mercado. Dado o setor "' + nicho + '", produza a lista das associações e entidades de classe mais relevantes do setor no Brasil (10 a 14), em português do Brasil, ordenadas da mais relevante para a menos. ' +
+    'Campos: nome (oficial), sigla, tipo (Associação setorial, Federação, Confederação, Sindicato patronal, Entidade técnica...), abrangencia (Nacional, Estadual — UF, Regional), relevancia (Alta/Média/Baixa para a estratégia comercial da "' + empresa + '"), motivo (1 frase: por que importa) e comoUsar (1 frase acionável: como a "' + empresa + '" pode usar essa entidade — evento, conteúdo, parceria, comissão). ' +
+    'Use APENAS entidades reais e conhecidas; se não tiver certeza de uma, não a inclua.';
+  const user = 'Setor: ' + nicho + '\n\nPESQUISA (base factual):\n"""\n' + (research || '(indisponível — use apenas entidades brasileiras amplamente conhecidas)') + '\n"""';
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: ANSWER_MODEL, temperature: 0.3, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], response_format: { type: 'json_schema', json_schema: { name: 'associacoes', strict: true, schema } } }),
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message || 'Erro ao estruturar associações');
+  const raw = d.choices && d.choices[0] && d.choices[0].message ? d.choices[0].message.content : '{}';
+  const parsed = JSON.parse(raw);
+  return { items: (parsed.items || []).slice(0, 14), grounded: !!research };
+}
+
+async function generateFocos(apiKey, empresa, portfolio, inputs, qtd, mode) {
+  const research = (mode && mode.parent)
+    ? await researchSubsegments(apiKey, empresa, portfolio, mode.parent)
+    : await researchMarket(apiKey, empresa, portfolio, inputs.objetivo, inputs.restricoes, inputs.dados, inputs.briefing);
   const n = Math.max(3, Math.min(12, qtd || 5));
   const foco = {
     type: 'object', additionalProperties: false,
@@ -286,9 +368,15 @@ async function generateFocos(apiKey, empresa, portfolio, inputs, qtd) {
     },
     required: ['id', 'nome', 'subnicho', 'tese', 'confianca', 'acao', 'refinar', 'tipoEntrada', 'notas', 'solucoes', 'evidencias', 'perguntas', 'concorrentes', 'ativos', 'contas', 'riscos', 'scoreInicial', 'presencaInicial', 'metaScore', 'metaPresenca', 'metaLeads', 'metaReunioes', 'metaOportunidades'],
   };
+  if (mode && mode.parent) {
+    foco.properties.volume = { type: 'integer' };
+    foco.properties.margem = { type: 'integer' };
+    foco.properties.chanceVM = { type: 'integer' };
+    foco.required = foco.required.concat(['volume', 'margem', 'chanceVM']);
+  }
   const schema = { type: 'object', additionalProperties: false, properties: { focos: { type: 'array', items: foco } }, required: ['focos'] };
 
-  const sys =
+  let sys =
     'Você é o motor de recomendação estratégica do Radar AEO/GEO da "' + empresa + '". ' +
     'Recomende EXATAMENTE ' + n + ' focos mensais de whale hunting, ranqueados do mais forte ao mais fraco, ' +
     'com base em: análise de mercado, portfólio da empresa, concorrência, lacunas de presença em respostas de IA (AEO/GEO), ' +
@@ -302,7 +390,7 @@ async function generateFocos(apiKey, empresa, portfolio, inputs, qtd) {
     'contas = empresas-alvo reais ou plausíveis do nicho no Brasil; ' +
     'scoreInicial 20-55, metaScore 65-80, presencaInicial 5-25, metaPresenca 35-55, e metas de leads/reuniões/oportunidades realistas. ' +
     'id = slug curto único (ex.: "coop", "agro", "saude").';
-  const user =
+  let user =
     'PORTFÓLIO da ' + empresa + ' (use só estes em "solucoes"): ' + (portfolio || []).join(', ') + '\n' +
     'OBJETIVO do mês: ' + (inputs.objetivo || '(não informado)') + '\n' +
     'RESTRIÇÕES/PRIORIDADES: ' + (inputs.restricoes || '(nenhuma)') + '\n' +
@@ -311,6 +399,25 @@ async function generateFocos(apiKey, empresa, portfolio, inputs, qtd) {
     (inputs.briefing ? ('BRIEFING interno: ' + inputs.briefing.slice(0, 1800) + '\n') : '') +
     '\nANÁLISE DE MERCADO (pesquisa, use como base factual):\n"""\n' + (research || '(indisponível — use seu conhecimento do mercado brasileiro)') + '\n"""\n\n' +
     'Gere os ' + n + ' focos ranqueados agora.';
+
+  if (mode && mode.parent) {
+    const p = mode.parent;
+    sys =
+      'Você é o motor de recomendação estratégica do Radar AEO/GEO da "' + empresa + '". ' +
+      'O usuário escolheu o macro-segmento "' + p.nome + '" e quer EXPANDI-LO. Gere EXATAMENTE ' + n + ' SUBSEGMENTOS específicos desse macro-segmento ' +
+      '(ex.: para Agronegócio: máquinas agrícolas, fertilizantes, sementes, nutrição animal, pecuária, armazenagem...), ranqueados do mais forte ao mais fraco. ' +
+      'Cada subsegmento segue o MESMO formato completo de foco (tese, notas, evidências, perguntas, concorrentes, ativos, contas, riscos, metas), específico e realista para o mercado brasileiro. ' +
+      'Preencha também, para cada subsegmento, três notas inteiras de 0 a 10: volume (tamanho/volume de mercado no Brasil), margem (potencial de margem/ticket para consultoria e treinamento comercial) e chanceVM (probabilidade de precisar da "' + empresa + '" — intensidade da dor comercial + fit com o portfólio). ' +
+      'Regras: notas 0-10 inteiros coerentes; confianca ∈ {alta, media-alta, media, baixa}; acao curta; refinar=false em subsegmentos já específicos; tipoEntrada="Assistida"; solucoes SOMENTE do portfólio; ' +
+      'evidencias com origem plausível ("Análise de mercado", "Portfólio", "Tendências"); perguntas = o que um decisor desse subsegmento perguntaria a uma IA; contas = empresas reais ou plausíveis do subsegmento no Brasil; ' +
+      'scoreInicial 20-55, metaScore 65-80, presencaInicial 5-25, metaPresenca 35-55; id = slug curto único.';
+    user =
+      'MACRO-SEGMENTO a expandir: ' + p.nome + (p.subnicho ? (' (' + p.subnicho + ')') : '') + '\n' +
+      'TESE do macro-segmento: ' + (p.tese || '(não informada)') + '\n' +
+      'PORTFÓLIO da ' + empresa + ' (use só estes em "solucoes"): ' + (portfolio || []).join(', ') + '\n\n' +
+      'PESQUISA sobre o segmento (base factual):\n"""\n' + (research || '(indisponível — use seu conhecimento do mercado brasileiro)') + '\n"""\n\n' +
+      'Gere os ' + n + ' subsegmentos ranqueados agora.';
+  }
 
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -370,6 +477,35 @@ export default async function handler(req, res) {
       res.status(200).json({ ok: true, focos: out.focos, grounded: out.grounded });
     } catch (e) {
       res.status(500).json({ error: 'focos_failed', message: 'Falha ao gerar focos: ' + (e.message || String(e)) });
+    }
+    return;
+  }
+
+  // Ação: expandir macro-segmento em subsegmentos (volume, margem, chance VendaMais)
+  if (body.action === 'expandir') {
+    const empresaE = (body.empresa || 'VendaMais').trim();
+    const parent = body.parent || {};
+    if (!parent.nome) { res.status(400).json({ error: 'no_parent', message: 'Segmento a expandir não informado.' }); return; }
+    const portfolioE = Array.isArray(body.portfolio) ? body.portfolio : [];
+    try {
+      const out = await generateFocos(apiKey, empresaE, portfolioE, {}, body.qtd || 10, { parent });
+      res.status(200).json({ ok: true, focos: out.focos, grounded: out.grounded });
+    } catch (e) {
+      res.status(500).json({ error: 'expandir_failed', message: 'Falha ao expandir o segmento: ' + (e.message || String(e)) });
+    }
+    return;
+  }
+
+  // Ação: associações e entidades de classe do segmento foco
+  if (body.action === 'associacoes') {
+    const empresaA = (body.empresa || 'VendaMais').trim();
+    const nicho = (body.nicho || '').trim();
+    if (!nicho) { res.status(400).json({ error: 'no_nicho', message: 'Defina o foco do mês (nicho) antes de buscar associações.' }); return; }
+    try {
+      const out = await findAssociations(apiKey, empresaA, nicho, body.contexto || '');
+      res.status(200).json({ ok: true, nicho: nicho, items: out.items, grounded: out.grounded });
+    } catch (e) {
+      res.status(500).json({ error: 'assoc_failed', message: 'Falha ao buscar associações: ' + (e.message || String(e)) });
     }
     return;
   }
