@@ -254,7 +254,7 @@ async function researchMarket(apiKey, empresa, portfolio, objetivo, restricoes, 
 async function researchSubsegments(apiKey, empresa, portfolio, parent) {
   const q =
     'Você é analista de mercado B2B no Brasil. O macro-segmento em análise é "' + parent.nome + '"' + (parent.tese ? (' — contexto: ' + parent.tese) : '') + '. ' +
-    'Liste as 10 a 12 principais SUBDIVISÕES/subsegmentos desse setor no Brasil (elos da cadeia, categorias de empresas). ' +
+    'Liste as 6 a 8 principais SUBDIVISÕES/subsegmentos desse setor no Brasil (elos da cadeia, categorias de empresas). ' +
     'Para cada subdivisão, indique EM 1-2 LINHAS: volume/tamanho de mercado no Brasil, potencial de margem/ticket para serviços de consultoria e treinamento comercial, maturidade comercial típica das empresas e sinais de dor comercial. Seja conciso — máximo ~400 palavras no total. ' +
     'Empresa interessada: "' + empresa + '" (portfólio: ' + (portfolio || []).join(', ') + '). Cite fontes quando usar dados.';
   try {
@@ -489,7 +489,7 @@ export default async function handler(req, res) {
     if (!parent.nome) { res.status(400).json({ error: 'no_parent', message: 'Segmento a expandir não informado.' }); return; }
     const portfolioE = Array.isArray(body.portfolio) ? body.portfolio : [];
     try {
-      const out = await generateFocos(apiKey, empresaE, portfolioE, {}, body.qtd || 10, { parent });
+      const out = await generateFocos(apiKey, empresaE, portfolioE, {}, body.qtd || 5, { parent });
       res.status(200).json({ ok: true, focos: out.focos, grounded: out.grounded });
     } catch (e) {
       res.status(500).json({ error: 'expandir_failed', message: 'Falha ao expandir o segmento: ' + (e.message || String(e)) });
